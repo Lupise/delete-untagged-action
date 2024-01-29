@@ -1,16 +1,42 @@
 name: Versioning and releasing
 
+permissions:
+  contents: write
+  packages: write
+
 on:
   workflow_dispatch:
   push:
     branches:
       - main
 
-permissions:
-  contents: write
-  packages: write
-
 jobs:
-  manual-release:
-    uses: Lupise/reusable-workflow--release-it/.github/workflows/versioning.yml@v2
-    secrets: inherit
+  release-it:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    environment:
+      name: release-it
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: git config
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+      - run: sudo npm install -g release-it @release-it/conventional-changelog @release-it/bumper
+      - name: Release-it
+        run: release-it -VV --ci || git status
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: lupise/major-tagging-action@v0
